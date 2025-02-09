@@ -19,10 +19,10 @@ except NameError:
 colors_classification_model = YOLO(os.path.join(base_dir, "colors_classification_11n_v4.pt"))
 
 # size: 640
-fruits_detection_model = YOLO(os.path.join(base_dir, "fruits_detection_11n_v2.pt"))
+fruits_detection_model = YOLO(os.path.join(base_dir, "fruits_detection_11n_v3.pt"))
 
 # size: 640
-animals_detection_model = YOLO(os.path.join(base_dir, "animals_detection_11n_v2.pt"))
+animals_detection_model = YOLO(os.path.join(base_dir, "animals_detection_11n_v3.pt"))
 
 
 # =============== 유틸 함수 ===============
@@ -132,7 +132,8 @@ def predict():
         return jsonify({"error": "No image file"}), 400
 
     img_file = request.files["image"]
-    model_name = request.form.get(key = "model", default = "NONE")  # merge 후 전달받는 모델 이름
+    # model_name = request.form.get(key = "model", default = "NONE")  # merge 후 전달받는 모델 이름
+    model_name = request.args.get("model", "NONE")
 
     # 로그 출력
     print(f"===== POST /predict called =====")
