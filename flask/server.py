@@ -124,7 +124,7 @@ def predict():
 
     img_file = request.files["image"]
     model_name = request.args.get("model", "NONE")
-
+    print("\n" + "="*20 + " Log " + "="*20)
     app.logger.info(f"POST /predict called - File: {img_file.filename}, Selected Model: {model_name}")
 
     try:
