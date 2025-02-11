@@ -37,51 +37,38 @@ def read_image_as_cv2(file) -> np.ndarray:
         raise ValueError(f"이미지 변환 실패: {e}")
 
 
-def classify_center_region(model, image_cv2, resize: int = 224, threshold: float = 0.1) -> list:
+def classify_center_region(model, image_cv2, resize: int = 224, threshold: float = 0.2) -> list:
     """
-    이미지에서 9등분 영역(3x3) 중 '정중앙' 부분을 잘라 분류 모델로 예측  
+    이미지에서 가로, 세로 25% ~ 75% 영역(중앙 부분)을 잘라 분류 모델로 예측  
     반환: [{"prediction_result": 결과, "confidence": 신뢰도}, ...]  
-    결과가 없으면 빈 리스트 반환
+    (예측 결과가 없으면 빈 리스트 반환)
     """
     h, w, _ = image_cv2.shape
-    center_crop = image_cv2[h // 3: 2 * h // 3, w // 3: 2 * w // 3, :]
+    # 이미지 중앙 영역: 전체 높이와 너비의 25%~75% 영역
+    center_crop = image_cv2[h // 4: 3 * h // 4, w // 4: 3 * w // 4, :]
 
     # 입력 사이즈에 맞게 리사이즈
     if resize:
         center_crop = cv2.resize(center_crop, (resize, resize), interpolation=cv2.INTER_AREA)
 
-    # conf 인자는 모델에 따라 의미가 다를 수 있음
+    # 분류 모델 예측 (conf 인자는 모델에 따라 다르게 동작할 수 있음)
     results = model.predict(source=center_crop, conf=threshold)
     predictions = []
 
     if results and hasattr(results[0], "probs") and results[0].probs is not None:
         probs_tensor = results[0].probs.data  # torch.Tensor
-        # 상위 2개 예측 결과 추출
-        topk_values, topk_indices = torch.topk(probs_tensor, k=2)
-        top1_idx = int(topk_indices[0])
-        top1_conf = float(topk_values[0])
-        top2_idx = int(topk_indices[1])
-        top2_conf = float(topk_values[1])
-
-        if hasattr(results[0], "names") and results[0].names:
-            top1_result = results[0].names[top1_idx]
-            top2_result = results[0].names[top2_idx]
-        else:
-            top1_result = str(top1_idx)
-            top2_result = str(top2_idx)
-
-        # threshold 값보다 낮은 경우 필터링
-        if top1_conf >= threshold:
-            predictions.append({
-                "prediction_result": top1_result,
-                "confidence": round(top1_conf, 3)
-            })
-        if top2_conf >= threshold:
-            predictions.append({
-                "prediction_result": top2_result,
-                "confidence": round(top2_conf, 3)
-            })
-
+        k = min(5, probs_tensor.size(0))  # 최대 5개 예측
+        topk_values, topk_indices = torch.topk(probs_tensor, k=k)
+        for i in range(k):
+            conf_val = float(topk_values[i])
+            if conf_val >= threshold:
+                idx = int(topk_indices[i])
+                # 모델에 names 속성이 있으면 해당 이름 사용, 없으면 인덱스를 문자열로 변환
+                result_name = results[0].names[idx] if hasattr(results[0], "names") and results[0].names else str(idx)
+                predictions.append({
+                    "prediction_result": result_name,
+                    "confidence": round(conf_val, 3)
+                })
     return predictions
 
 
@@ -114,7 +101,7 @@ def obj_detection(model, image_cv2, conf_thres: float = 0.25, resize_width: int 
                 "bounding_box_area": [x1, y1, x2, y2],
             })
 
-            # 바운딩 박스 그리기 (옵션)
+            # (옵션) 바운딩 박스 그리기
             cv2.rectangle(resized_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv2.putText(resized_img, f"{prediction_result} {conf:.2f}", (x1, y1 - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
