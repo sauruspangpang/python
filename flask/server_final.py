@@ -21,9 +21,12 @@ def load_model(model_filename: str) -> YOLO:
 
 # 모델 변경 시 여기에 추가
 MODELS = {
-    "colors": load_model("colors_classification_11s_v1.pt"),
-    "fruits": load_model("fruits_detection_11s_v1.pt"),
-    "animals": load_model("animals_detection_11s_v1.pt"),
+    "colors": load_model("11n_cls_colors_v10.pt"),
+    "fruits": load_model("11n_detection_fruits_v10.pt"),
+    "animals": load_model("11n_detection_animals_v10.pt"),
+    "transportation": load_model("11n_detection_transportation_v1.pt"),
+    "stationery": load_model("11n_detection_stainonary_v2.pt"),
+    "clothes": load_model("11n_detection_clothes_v1.pt")
 }
 
 # === 유틸리티 함수들 ===
@@ -160,7 +163,7 @@ def predict():
                 "predictions": predictions
             }), 200
 
-        elif model_name in ["fruits", "animals"]:
+        elif model_name in ["fruits", "animals", "transportation", "stationery", "clothes"]:
             detection_model = MODELS[model_name]
             _, detections = process_detection(model=detection_model, image_cv2=img_cv2, conf_thres=0.2)
             for det in detections:
